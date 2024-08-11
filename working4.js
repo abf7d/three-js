@@ -33,7 +33,7 @@ class PolygonGroup {
                 
                 this.finalPositions.push(x, y, this.initialZPosition);
 
-                if (this.index === 1) {
+                if (this.index > 0) {
                     // Center polygon starts collapsed
                     this.positions.push(0, 0, this.initialZPosition);
                 } else {
@@ -86,7 +86,10 @@ class PolygonGroup {
     }
 
     update(progress, animationPhase) {
-        if (this.index === 1) {
+        // todo if the index is 2, its the lower polygon
+        // maybe expand on a longer delay so potentially
+        // have a separate progress for each polygon
+        if (this.index > 0) {
             const positions = this.geometry.getAttribute('position').array;
             const edges = this.edgesGeometry.getAttribute('position').array;
 
@@ -113,11 +116,28 @@ class PolygonGroup {
         } else {
             this.group.rotation.z -= 0.01;
         }
-
+        // The middle polygon should move first
+        // the bottom polygon movement should activate on a different phase
+        // but there should be a separate progress for a second stage animation
+        // Or let the first and second index move here
+        // and set the initial position of the bottom, second to 70 as well
+        // Need to test the animation phase and add a new one for moving the second
+        // Need a progress for expanding the middle polygon and dropping which is waht we have here
+        // One for expanding the bottom polygon and dropping
+        // one for momving back to the center, collapsing the middle one
+        // then worry about amination to rotate out
         // Move polygons based on the animation phase
-        if (/*animationPhase === 'moveMiddle' &&*/this.index === 1 ) {
+        if (/*animationPhase === 'moveMiddle' &&*/this.index > 0 ) {
             this.moveToZ(0, progress); // Move middle polygon to center position
         } 
+        // if (/*animationPhase === 'moveMiddle' &&*/this.index ===  2 ) {
+        //     this.moveToZ(0, progress); // Move middle polygon to center position
+        // } 
+
+        // if (animationPhase === 'hold' && this.index ===  2 ) {
+        //         this.moveToZ(0, progress); // Move middle polygon to center position
+        //     } 
+
         // else if (animationPhase === 'moveBottom' && this.index === 2) {
         //     this.moveToZ(-70, progress); // Move bottom polygon to bottom position
         // }
@@ -232,7 +252,7 @@ async function init() {
     const animationManager = new AnimationManager();
 
     // Create three polygons, all starting at the same z position
-    const layers = [70, 70, -70];
+    const layers = [70, 70, 70];
 
     layers.forEach((z, index) => {
         const polygonGroup = new PolygonGroup(scene, gridSize, gridSpacing, z, index, material, edgesMaterial);

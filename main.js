@@ -2,12 +2,80 @@ import * as THREE from 'three';
 import Stats from 'three/addons/libs/stats.module.js';
 import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js';
 
+class AnimationStep {
+    constructor(start, end, duration, action) {
+        this.start = start;
+        this.end = end;
+        this.duration = duration;
+        this.action = action;
+        this.startTime = null;
+    }
+
+    reset() {
+        this.startTime = null;
+    }
+
+    update(currentTime) {
+        if (this.startTime === null) {
+            this.startTime = currentTime;
+        }
+        const elapsed = (currentTime - this.startTime) / 1000;
+        const progress = Math.min(elapsed / this.duration, 1);
+
+        // Interpolate between start and end
+        const interpolatedValue = THREE.MathUtils.lerp(this.start, this.end, progress);
+
+        this.action(interpolatedValue);
+
+        return progress >= 1;
+    }
+    // update(currentTime) {
+    //     if (this.startTime === null) {
+    //         this.startTime = currentTime;
+    //     }
+    //     const elapsed = (currentTime - this.startTime) / 1000;
+    //     const progress = Math.min(elapsed / this.duration, 1);
+
+    //     this.action(progress);
+
+    //     return progress >= 1;
+    // }
+}
+
+class AnimationSequence {
+    constructor() {
+        this.steps = [];
+        this.currentStepIndex = 0;
+    }
+
+    addStep(step) {
+        this.steps.push(step);
+    }
+
+    update(currentTime) {
+        if (this.currentStepIndex < this.steps.length) {
+            const stepCompleted = this.steps[this.currentStepIndex].update(currentTime);
+            if (stepCompleted) {
+                this.currentStepIndex++;
+            }
+        }
+    }
+
+    reset() {
+        this.currentStepIndex = 0;
+        this.steps.forEach(step => step.reset());
+    }
+
+    isComplete() {
+        return this.currentStepIndex >= this.steps.length;
+    }
+}
+
 class PolygonGroup {
     constructor(scene, gridSize, gridSpacing, zPosition, index, material, edgesMaterial) {
         this.scene = scene;
         this.gridSize = gridSize;
         this.gridSpacing = gridSpacing;
-        this.initialZPosition = zPosition; // Store initial z position
         this.index = index;
         this.material = material;
         this.edgesMaterial = edgesMaterial;
@@ -21,6 +89,8 @@ class PolygonGroup {
         this.finalEdges = [];
         this.createPolygons();
         this.scene.add(this.group);
+
+        this.animationSequence = new AnimationSequence();
     }
 
     createPolygons() {
@@ -31,35 +101,30 @@ class PolygonGroup {
                 const y = (j - (this.gridSize - 1) / 2) * this.gridSpacing;
                 const idx = i * this.gridSize + j;
                 
-                this.finalPositions.push(x, y, this.initialZPosition);
+                this.finalPositions.push(x, y, 0); // Default to center z-position (0)
 
-                if (this.index > 0) {
-                    // Center polygon starts collapsed
-                    this.positions.push(0, 0, this.initialZPosition);
+                if (this.index === 0) {
+                this.positions.push(x, y, 0);
                 } else {
-                    // Top and bottom polygons start expanded
-                    this.positions.push(x, y, this.initialZPosition);
+                    this.positions.push(0, 0, 0);
                 }
-
                 color.setHSL(0.01 + 0.1 * idx / (this.gridSize + j) / (this.gridSize * this.gridSize), 1.0, 0.5);
                 color.toArray(this.colors, this.colors.length);
                 this.sizes.push(10);
 
-                // Create squares by connecting points horizontally and vertically
                 if (i < this.gridSize - 1) {
-                    this.finalEdges.push(x, y, this.initialZPosition, x + this.gridSpacing, y, this.initialZPosition);
-                    this.edges.push(0, 0, this.initialZPosition, 0, 0, this.initialZPosition);
+                    this.finalEdges.push(x, y, 0, x + this.gridSpacing, y, 0);
+                    this.edges.push(x, y, 0, x, y, 0);
                 }
                 if (j < this.gridSize - 1) {
-                    this.finalEdges.push(x, y, this.initialZPosition, x, y + this.gridSpacing, this.initialZPosition);
-                    this.edges.push(0, 0, this.initialZPosition, 0, 0, this.initialZPosition);
+                    this.finalEdges.push(x, y, 0, x, y + this.gridSpacing, 0);
+                    this.edges.push(x, y, 0, x, y, 0);
                 }
                 if (i < this.gridSize - 1 && j < this.gridSize - 1) {
-                    this.finalEdges.push(x + this.gridSpacing, y, this.initialZPosition, x + this.gridSpacing, y + this.gridSpacing, this.initialZPosition);
-                    this.edges.push(0, 0, this.initialZPosition, 0, 0, this.initialZPosition);
-
-                    this.finalEdges.push(x, y + this.gridSpacing, this.initialZPosition, x + this.gridSpacing, y + this.gridSpacing, this.initialZPosition);
-                    this.edges.push(0, 0, this.initialZPosition, 0, 0, this.initialZPosition);
+                    this.finalEdges.push(x + this.gridSpacing, y, 0, x + this.gridSpacing, y + this.gridSpacing, 0);
+                    this.edges.push(x, y, 0, x, y, 0);
+                    this.finalEdges.push(x, y + this.gridSpacing, 0, x + this.gridSpacing, y + this.gridSpacing, 0);
+                    this.edges.push(x, y, 0, x, y, 0);
                 }
             }
         }
@@ -81,57 +146,90 @@ class PolygonGroup {
         this.edgesGeometry = edgesGeometry;
     }
 
-    moveToZ(newZ, progress) {
-        this.group.position.z = THREE.MathUtils.lerp(this.initialZPosition - 70, newZ - 70, progress);
+    // moveToZ(targetZ, duration) {
+    //     this.animationSequence.addStep(new AnimationStep(
+    //         this.group.position.z,
+    //         targetZ,
+    //         duration,
+    //         (progress) => {
+    //             this.group.position.z = THREE.MathUtils.lerp(this.group.position.z, targetZ, progress);
+    //         }
+    //     ));
+    // }
+
+    moveToZ(targetZ, duration, startZx = null) {
+        const startZ = startZx ? startZx : this.group.position.z;  // Capture the current Z position at the start of the animation
+        this.animationSequence.addStep(new AnimationStep(
+            startZ,  // Start Z position
+            targetZ, // Target Z position
+            duration,
+            (interpolatedZ) => {
+                // Interpolate the Z position between startZ and targetZ
+                this.group.position.z = interpolatedZ;
+            }
+        ));
     }
 
-    update(progress, animationPhase) {
-        // todo if the index is 2, its the lower polygon
-        // maybe expand on a longer delay so potentially
-        // have a separate progress for each polygon
-        if (this.index > 0) {
-            const positions = this.geometry.getAttribute('position').array;
-            const edges = this.edgesGeometry.getAttribute('position').array;
-
-            for (let i = 0; i < this.finalPositions.length; i += 3) {
-                positions[i] = this.finalPositions[i] * progress;
-                positions[i + 1] = this.finalPositions[i + 1] * progress;
-                positions[i + 2] = this.finalPositions[i + 2]; // z remains the same
+    pause(duration) {
+        this.animationSequence.addStep(new AnimationStep(
+            this.group.position.z,
+            this.group.position.z,
+            duration,
+            (progress) => {
+               
             }
-            this.geometry.attributes.position.needsUpdate = true;
+        ));
+    }
 
-            for (let i = 0; i < this.finalEdges.length; i += 6) {
-                edges[i] = this.finalEdges[i] * progress;
-                edges[i + 1] = this.finalEdges[i + 1] * progress;
-                edges[i + 2] = this.finalEdges[i + 2]; // z remains the same
-                edges[i + 3] = this.finalEdges[i + 3] * progress;
-                edges[i + 4] = this.finalEdges[i + 4] * progress;
-                edges[i + 5] = this.finalEdges[i + 5]; // z remains the same
+    animatePointsExpandCollapse(expand, duration) {
+        this.animationSequence.addStep(new AnimationStep(
+            expand ? 0 : 1,
+            expand ? 1 : 0,
+            duration,
+            (interpolatedValue) => {
+                const positions = this.geometry.getAttribute('position').array;
+                const edges = this.edgesGeometry.getAttribute('position').array;
+
+                for (let i = 0; i < this.finalPositions.length; i += 3) {
+                    positions[i] = this.finalPositions[i] * interpolatedValue;
+                    positions[i + 1] = this.finalPositions[i + 1] * interpolatedValue;
+                }
+                this.geometry.attributes.position.needsUpdate = true;
+
+                // for (let i = 0; i < this.finalEdges.length; i += 6) {
+                //     edges[i] = this.finalEdges[i] * interpolatedValue;
+                //     edges[i + 1] = this.finalEdges[i + 1] * interpolatedValue;
+                // }
+                // this.edgesGeometry.attributes.position.needsUpdate = true;
             }
-            this.edgesGeometry.attributes.position.needsUpdate = true;
-        }
+        ));
+        //     (progress) => {
+        //         const positions = this.geometry.getAttribute('position').array;
+        //         const edges = this.edgesGeometry.getAttribute('position').array;
 
-        if (this.index % 2 === 0) {
+        //         for (let i = 0; i < this.finalPositions.length; i += 3) {
+        //             positions[i] = this.finalPositions[i] * progress;
+        //             positions[i + 1] = this.finalPositions[i + 1] * progress;
+        //         }
+        //         this.geometry.attributes.position.needsUpdate = true;
+
+        //         // Expanding collapse edges
+        //         // for (let i = 0; i < this.finalEdges.length; i += 6) {
+        //         //     edges[i] = this.finalEdges[i] * progress;
+        //         //     edges[i + 1] = this.finalEdges[i + 1] * progress;
+        //         // }
+        //         // this.edgesGeometry.attributes.position.needsUpdate = true;
+        //     }
+        // ));
+    }
+
+    update(currentTime) {
+        this.animationSequence.update(currentTime);
+
+        // if (this.index % 2 === 0) {
             this.group.rotation.z += 0.01;
-        } else {
-            this.group.rotation.z -= 0.01;
-        }
-        // The middle polygon should move first
-        // the bottom polygon movement should activate on a different phase
-        // but there should be a separate progress for a second stage animation
-
-        // Move polygons based on the animation phase
-        if (/*animationPhase === 'moveMiddle' &&*/this.index === 1 ) {
-            this.moveToZ(0, progress); // Move middle polygon to center position
-        } 
-        // if (/*animationPhase === 'moveMiddle' &&*/this.index ===  2 ) {
-        //     this.moveToZ(0, progress); // Move middle polygon to center position
-        // } 
-
-
-
-        // else if (animationPhase === 'moveBottom' && this.index === 2) {
-        //     this.moveToZ(-70, progress); // Move bottom polygon to bottom position
+        // } else {
+        //     this.group.rotation.z -= 0.01;
         // }
     }
 }
@@ -139,7 +237,6 @@ class PolygonGroup {
 class AnimationManager {
     constructor() {
         this.polygons = [];
-        this.animationPhase = 'initial-hold';
         this.startTime = Date.now();
     }
 
@@ -148,66 +245,11 @@ class AnimationManager {
     }
 
     animate() {
-        const elapsed = (Date.now() - this.startTime) / 1000; // Time in seconds
-        let progress;
-
-        if (this.animationPhase === 'initial-hold') {
-            progress = 0;
-
-            if (elapsed >= .5) {
-                this.animationPhase = 'collapse';
-                this.startTime = Date.now();
-            }
-        }
-        if (this.animationPhase === 'expand') {
-            progress = Math.min(elapsed / 0.3, 1);
-
-            if (progress >= 1) {
-                // this.animationPhase = 'moveMiddle';
-                this.animationPhase = 'hold';
-                this.startTime = Date.now();
-            }
-        } else if (this.animationPhase === 'moveMiddle') {
-            progress = Math.min(elapsed / 0.5, 1);
-
-            if (progress >= 1) {
-                this.animationPhase = 'moveBottom';
-                this.startTime = Date.now();
-            }
-        } else if (this.animationPhase === 'moveBottom') {
-            progress = Math.min(elapsed / 0.5, 1);
-
-            if (progress >= 1) {
-                this.animationPhase = 'hold';
-                this.startTime = Date.now();
-            }
-        } else if (this.animationPhase === 'hold') {
-            progress = 1;
-
-            if (elapsed >= 3) {
-                this.animationPhase = 'collapse';
-                this.startTime = Date.now();
-            }
-        } else if (this.animationPhase === 'collapse') {
-            progress = 1 - Math.min(elapsed / 0.3, 1);
-
-            if (progress <= 0) {
-                this.animationPhase = 'post-collapse';
-                // this.animationPhase = 'post-collapse';
-                this.startTime = Date.now();
-            }
-        } else if (this.animationPhase === 'post-collapse') {
-            progress = 0;
-
-            if (elapsed >= 2) {
-                this.animationPhase = 'expand';
-                this.startTime = Date.now();
-            }
-        }
-
-        this.polygons.forEach(polygon => polygon.update(progress, this.animationPhase));
+        const currentTime = Date.now();
+        this.polygons.forEach(polygon => polygon.update(currentTime));
     }
 }
+
 async function init() {
     const vertexShader = await fetch('vertexShader.glsl').then(res => res.text());
     const fragmentShader = await fetch('fragmentShader.glsl').then(res => res.text());
@@ -239,17 +281,44 @@ async function init() {
 
     const gridSize = 5;
     const gridSpacing = 15;
-    const initialZPosition = 70; // All polygons start at this z position
+    const initialZPosition = 70;
 
     const animationManager = new AnimationManager();
+    const polygonGroup0 = new PolygonGroup(scene, gridSize, gridSpacing, initialZPosition, 0, material, edgesMaterial);
+    polygonGroup0.animatePointsExpandCollapse(true, 0);
+    animationManager.addPolygon(polygonGroup0);
+    const polygonGroup1 = new PolygonGroup(scene, gridSize, gridSpacing, initialZPosition, 1, material, edgesMaterial);
+    // polygonGroup1.animatePointsExpandCollapse(false, 0.5);
+    // polygonGroup1.pause(5);
+    polygonGroup1.moveToZ(-70, .5);
+    polygonGroup1.animatePointsExpandCollapse(true, 0.5);
+    polygonGroup1.pause(8);
+    polygonGroup1.animatePointsExpandCollapse(false, 0.5);
+    polygonGroup1.moveToZ(0, .5, -70);
+    // 
 
-    // Create three polygons, all starting at the same z position
-    const layers = [70, 70, -70];
 
-    layers.forEach((z, index) => {
-        const polygonGroup = new PolygonGroup(scene, gridSize, gridSpacing, z, index, material, edgesMaterial);
-        animationManager.addPolygon(polygonGroup);
-    });
+    // polygonGroup1.moveToZ(-70, 0.5);
+    // polygonGroup1.moveToZ(0, 0.5);
+
+    // polygonGroup1.animatePointsExpandCollapse(false, 0.5);
+
+    animationManager.addPolygon(polygonGroup1);
+
+    const polygonGroup2 = new PolygonGroup(scene, gridSize, gridSpacing, 0, 2, material, edgesMaterial);
+    // polygonGroup2.animatePointsExpandCollapse(true, 0.5);
+    // polygonGroup2.animatePointsExpandCollapse(false, 0.5);
+    // polygonGroup2.moveToZ(0, 2);
+    polygonGroup2.pause(3);
+    polygonGroup2.moveToZ(-140, .5, -70);
+    polygonGroup2.animatePointsExpandCollapse(true, 0.25);
+    polygonGroup2.pause(3);
+    polygonGroup2.animatePointsExpandCollapse(false, 0.25);
+    polygonGroup2.pause(.5);
+    polygonGroup2.moveToZ(-70, .5, -140);
+    polygonGroup2.pause(1.42);
+    polygonGroup2.moveToZ(0, .5, -70);
+    animationManager.addPolygon(polygonGroup2);
 
     const renderer = new THREE.WebGLRenderer();
     renderer.setSize(window.innerWidth, window.innerHeight);
