@@ -33,7 +33,7 @@ class PolygonGroup {
                 
                 this.finalPositions.push(x, y, this.initialZPosition);
 
-                if (this.index > 0) {
+                if (this.index === 1) {
                     // Center polygon starts collapsed
                     this.positions.push(0, 0, this.initialZPosition);
                 } else {
@@ -86,10 +86,7 @@ class PolygonGroup {
     }
 
     update(progress, animationPhase) {
-        // todo if the index is 2, its the lower polygon
-        // maybe expand on a longer delay so potentially
-        // have a separate progress for each polygon
-        if (this.index > 0) {
+        if (this.index === 1) {
             const positions = this.geometry.getAttribute('position').array;
             const edges = this.edgesGeometry.getAttribute('position').array;
 
@@ -116,20 +113,11 @@ class PolygonGroup {
         } else {
             this.group.rotation.z -= 0.01;
         }
-        // The middle polygon should move first
-        // the bottom polygon movement should activate on a different phase
-        // but there should be a separate progress for a second stage animation
 
         // Move polygons based on the animation phase
         if (/*animationPhase === 'moveMiddle' &&*/this.index === 1 ) {
             this.moveToZ(0, progress); // Move middle polygon to center position
         } 
-        // if (/*animationPhase === 'moveMiddle' &&*/this.index ===  2 ) {
-        //     this.moveToZ(0, progress); // Move middle polygon to center position
-        // } 
-
-
-
         // else if (animationPhase === 'moveBottom' && this.index === 2) {
         //     this.moveToZ(-70, progress); // Move bottom polygon to bottom position
         // }
