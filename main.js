@@ -181,7 +181,7 @@ class PolygonGroup {
 
   pause(duration) {
     this.animationSequence.addStep(
-      new AnimationStep(this.group.position.z, this.group.position.z, duration, (progress) => {})
+      new AnimationStep(this.group.position.z, this.group.position.z, duration, (progress) => { })
     );
   }
 
@@ -251,16 +251,17 @@ async function init() {
 
   const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 10000);
   camera.position.set(250, 10, 250);
-  camera.lookAt(0, 0, 0);
+  //camera.lookAt(0, 0, 0); 
+  camera.lookAt(0, 0, -70); // moved the polygons up on the screen
   camera.rotation.z = THREE.MathUtils.degToRad(45);
 
   const material = new THREE.ShaderMaterial({
     uniforms: {
-      color: {value: new THREE.Color(0xffffff)},
+      color: { value: new THREE.Color(0xffffff) },
       pointTexture: {
         value: new THREE.TextureLoader().load('https://threejs.org/examples/textures/sprites/circle.png')
       },
-      alphaTest: {value: 0.9}
+      alphaTest: { value: 0.9 }
     },
     vertexShader: vertexShader,
     fragmentShader: fragmentShader
