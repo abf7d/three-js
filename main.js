@@ -365,8 +365,9 @@ async function init() {
   );
   polygonGroup1.moveToZ(-70, 0.5);
   polygonGroup1.animatePointsExpandCollapse(true, 0.5);
-  polygonGroup1.pause(14.55)
+  polygonGroup1.pause(14.5)
   polygonGroup1.animatePointsExpandCollapse(false, 0.5);
+  polygonGroup1.pause(.35)
   polygonGroup1.moveToZ(0, 0.5, -70);
 
   animationManager.addPolygon(polygonGroup1);
