@@ -64,7 +64,7 @@ class AnimationSequence {
         this.currentStepIndex++;
       }
     } else {
-        this.reset();
+      this.reset();
     }
   }
 
@@ -125,7 +125,7 @@ class PolygonGroup {
         }
         color.setHSL(
           0.01 +
-            (0.1 * idx) / (this.gridSize + j) / (this.gridSize * this.gridSize),
+          (0.1 * idx) / (this.gridSize + j) / (this.gridSize * this.gridSize),
           1.0,
           0.5
         );
@@ -192,17 +192,6 @@ class PolygonGroup {
     this.edgesGeometry = edgesGeometry;
   }
 
-  // moveToZ(targetZ, duration) {
-  //     this.animationSequence.addStep(new AnimationStep(
-  //         this.group.position.z,
-  //         targetZ,
-  //         duration,
-  //         (progress) => {
-  //             this.group.position.z = THREE.MathUtils.lerp(this.group.position.z, targetZ, progress);
-  //         }
-  //     ));
-  // }
-
   moveToZ(targetZ, duration, startZx = null) {
     const startZ = startZx ? startZx : this.group.position.z; // Capture the current Z position at the start of the animation
     this.animationSequence.addStep(
@@ -239,7 +228,7 @@ class PolygonGroup {
         this.group.position.z,
         this.group.position.z,
         duration,
-        (progress) => {}
+        (progress) => { }
       )
     );
   }
@@ -277,24 +266,6 @@ class PolygonGroup {
         }
       )
     );
-    //     (progress) => {
-    //         const positions = this.geometry.getAttribute('position').array;
-    //         const edges = this.edgesGeometry.getAttribute('position').array;
-
-    //         for (let i = 0; i < this.finalPositions.length; i += 3) {
-    //             positions[i] = this.finalPositions[i] * progress;
-    //             positions[i + 1] = this.finalPositions[i + 1] * progress;
-    //         }
-    //         this.geometry.attributes.position.needsUpdate = true;
-
-    //         // Expanding collapse edges
-    //         // for (let i = 0; i < this.finalEdges.length; i += 6) {
-    //         //     edges[i] = this.finalEdges[i] * progress;
-    //         //     edges[i + 1] = this.finalEdges[i + 1] * progress;
-    //         // }
-    //         // this.edgesGeometry.attributes.position.needsUpdate = true;
-    //     }
-    // ));
   }
 
   update(currentTime) {
@@ -381,6 +352,7 @@ async function init() {
     edgesMaterial
   );
   polygonGroup0.animatePointsExpandCollapse(true, 0);
+  polygonGroup0.pause(16.5)
   animationManager.addPolygon(polygonGroup0);
   const polygonGroup1 = new PolygonGroup(
     scene,
@@ -391,20 +363,11 @@ async function init() {
     material,
     edgesMaterial
   );
-  // polygonGroup1.animatePointsExpandCollapse(false, 0.5);
-  // polygonGroup1.pause(5);
-//   polygonGroup1.pause(2);
   polygonGroup1.moveToZ(-70, 0.5);
   polygonGroup1.animatePointsExpandCollapse(true, 0.5);
   polygonGroup1.pause(14.55)
   polygonGroup1.animatePointsExpandCollapse(false, 0.5);
   polygonGroup1.moveToZ(0, 0.5, -70);
-  //
-
-  // polygonGroup1.moveToZ(-70, 0.5);
-  // polygonGroup1.moveToZ(0, 0.5);
-
-  // polygonGroup1.animatePointsExpandCollapse(false, 0.5);
 
   animationManager.addPolygon(polygonGroup1);
 
@@ -417,23 +380,17 @@ async function init() {
     material,
     edgesMaterial
   );
-  // polygonGroup2.animatePointsExpandCollapse(true, 0.5);
-  // polygonGroup2.animatePointsExpandCollapse(false, 0.5);
-  // polygonGroup2.moveToZ(0, 2);
-//   polygonGroup1.pause(2);
   polygonGroup2.pause(3);
   polygonGroup2.moveToZ(-140, 0.5, -70);
   polygonGroup2.animatePointsExpandCollapse(true, 0.25);
   polygonGroup2.pause(2);
   polygonGroup2.animatePointsExpandCollapse(false, 0.25);
   polygonGroup2.moveToY(-140, 0.5, 0);
-//   polygonGroup2.pause(2);
   polygonGroup2.moveToY(0, 0.5, 140);
   polygonGroup2.pause(2);
   polygonGroup2.moveToY(-140, 0.5, 0);
-  //   polygonGroup2.pause(2);
-    polygonGroup2.moveToY(0, 0.5, 140);
-    polygonGroup2.animatePointsExpandCollapse(true, 0.25);
+  polygonGroup2.moveToY(0, 0.5, 140);
+  polygonGroup2.animatePointsExpandCollapse(true, 0.25);
   polygonGroup2.pause(3);
   polygonGroup2.animatePointsExpandCollapse(false, 0.25);
   polygonGroup2.pause(0.5);
