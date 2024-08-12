@@ -216,6 +216,21 @@ class PolygonGroup {
     );
   }
 
+  moveToX(targetZ, duration, startZx = null) {
+    const startZ = startZx ? startZx : this.group.position.z; // Capture the current Z position at the start of the animation
+    this.animationSequence.addStep(
+      new AnimationStep(
+        startZ, // Start Z position
+        targetZ, // Target Z position
+        duration,
+        (interpolatedZ) => {
+          // Interpolate the Z position between startZ and targetZ
+          this.group.position.x = interpolatedZ;
+        }
+      )
+    );
+  }
+
   pause(duration) {
     this.animationSequence.addStep(
       new AnimationStep(
@@ -378,7 +393,7 @@ async function init() {
   // polygonGroup1.pause(5);
   polygonGroup1.moveToZ(-70, 0.5);
   polygonGroup1.animatePointsExpandCollapse(true, 0.5);
-  polygonGroup1.pause(8);
+  polygonGroup1.pause(14.1);
   polygonGroup1.animatePointsExpandCollapse(false, 0.5);
   polygonGroup1.moveToZ(0, 0.5, -70);
   //
@@ -405,6 +420,14 @@ async function init() {
   polygonGroup2.pause(3);
   polygonGroup2.moveToZ(-140, 0.5, -70);
   polygonGroup2.animatePointsExpandCollapse(true, 0.25);
+  polygonGroup2.pause(2);
+  polygonGroup2.moveToX(-140, 0.5, 0);
+//   polygonGroup2.pause(2);
+  polygonGroup2.moveToX(0, 0.5, 140);
+  polygonGroup2.pause(2);
+  polygonGroup2.moveToX(-140, 0.5, 0);
+  //   polygonGroup2.pause(2);
+    polygonGroup2.moveToX(0, 0.5, 140);
   polygonGroup2.pause(3);
   polygonGroup2.animatePointsExpandCollapse(false, 0.25);
   polygonGroup2.pause(0.5);
