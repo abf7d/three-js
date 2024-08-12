@@ -1,0 +1,28 @@
+{
+  "bracketSpacing": false,
+  "singleQuote": true,
+  "printWidth": 120,
+  "trailingComma": "none",
+  "endOfLine": "auto",
+  "overrides": [
+    {
+      "files": "**/*.md",
+      "options": {
+        "parser": "markdown",
+        "proseWrap": "always"
+      }
+    },
+    {
+      "files": "*.html",
+      "options": {
+        "parser": "html"
+      }
+    },
+    {
+      "files": "*.component.html",
+      "options": {
+        "parser": "angular"
+      }
+    }
+  ]
+}
