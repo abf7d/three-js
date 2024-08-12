@@ -393,7 +393,7 @@ async function init() {
   // polygonGroup1.pause(5);
   polygonGroup1.moveToZ(-70, 0.5);
   polygonGroup1.animatePointsExpandCollapse(true, 0.5);
-  polygonGroup1.pause(14.1);
+  polygonGroup1.pause(14.6);
   polygonGroup1.animatePointsExpandCollapse(false, 0.5);
   polygonGroup1.moveToZ(0, 0.5, -70);
   //
@@ -421,6 +421,7 @@ async function init() {
   polygonGroup2.moveToZ(-140, 0.5, -70);
   polygonGroup2.animatePointsExpandCollapse(true, 0.25);
   polygonGroup2.pause(2);
+  polygonGroup2.animatePointsExpandCollapse(false, 0.25);
   polygonGroup2.moveToX(-140, 0.5, 0);
 //   polygonGroup2.pause(2);
   polygonGroup2.moveToX(0, 0.5, 140);
@@ -428,6 +429,7 @@ async function init() {
   polygonGroup2.moveToX(-140, 0.5, 0);
   //   polygonGroup2.pause(2);
     polygonGroup2.moveToX(0, 0.5, 140);
+    polygonGroup2.animatePointsExpandCollapse(true, 0.25);
   polygonGroup2.pause(3);
   polygonGroup2.animatePointsExpandCollapse(false, 0.25);
   polygonGroup2.pause(0.5);
