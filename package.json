@@ -1,6 +1,7 @@
 {
   "scripts": {
-    "format": "npx prettier --write ."
+    "format": "npx prettier --write .",
+    "start": "npx vite"
   },
   "dependencies": {
     "gsap": "^3.12.5",
