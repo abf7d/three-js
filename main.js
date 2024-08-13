@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import Stats from 'three/addons/libs/stats.module.js';
 import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js';
 
+let projects = [];
 class AnimationStep {
   constructor(start, end, duration, action) {
     this.start = start;
@@ -97,54 +98,84 @@ class PolygonGroup {
 
   createPolygons() {
     const color = new THREE.Color();
-    for (let i = 0; i < this.gridSize; i++) {
-      for (let j = 0; j < this.gridSize; j++) {
-        const colorCycleMutl = 6;
-        const x = (i - (this.gridSize - 1) / 2) * this.gridSpacing;
-        const y = (j - (this.gridSize - 1) / 2) * this.gridSpacing;
-        const idx = i * colorCycleMutl * this.gridSize + j;
+
+    // Define colors for risk levels
+    const riskColors = {
+        0: new THREE.Color(0x11cc11), // Green
+        1: new THREE.Color(0xffd800), // Yellow
+        2: new THREE.Color(0xff0000), // Red
+        3: new THREE.Color(0x000000)  // Black
+        
+    };
+
+    // Initialize arrays to hold color data
+    this.colors = [];
+    const edgeColors = []; // Array to hold edge colors
+
+    // Set up points
+    projects[this.index].integrations.forEach((integration, j) => {
+        integration.y = 0.65 * integration.y;
+        integration.x = -1 * integration.x;
+    });
+
+    projects[this.index].integrations.forEach((integration, j) => {
+        const x = integration.x;
+        const y = integration.y;
 
         this.finalPositions.push(x, y, 0); // Default to center z-position (0)
 
         if (this.index === 0) {
-          this.positions.push(x, y, 0);
+            this.positions.push(x, y, 0);
         } else {
-          this.positions.push(0, 0, 0);
+            this.positions.push(0, 0, 0);
         }
-        color.setHSL(0.01 + (0.1 * idx) / (this.gridSize + j) / (this.gridSize * this.gridSize), 1.0, 0.5);
-        color.toArray(this.colors, this.colors.length);
+
+        // Set color based on risk
+        const riskColor = riskColors[integration.risk] || riskColors[0]; // Default to green if risk is undefined
+        riskColor.toArray(this.colors, this.colors.length);
+
         this.sizes.push(10);
+    });
 
-        if (i < this.gridSize - 1) {
-          this.finalEdges.push(x, y, 0, x + this.gridSpacing, y, 0);
-          this.edges.push(x, y, 0, x, y, 0);
-        }
-        if (j < this.gridSize - 1) {
-          this.finalEdges.push(x, y, 0, x, y + this.gridSpacing, 0);
-          this.edges.push(x, y, 0, x, y, 0);
-        }
-        if (i < this.gridSize - 1 && j < this.gridSize - 1) {
-          this.finalEdges.push(x + this.gridSpacing, y, 0, x + this.gridSpacing, y + this.gridSpacing, 0);
-          this.edges.push(x, y, 0, x, y, 0);
-          this.finalEdges.push(x, y + this.gridSpacing, 0, x + this.gridSpacing, y + this.gridSpacing, 0);
-          this.edges.push(x, y, 0, x, y, 0);
-        }
-      }
-    }
+    const intMap = new Map(projects[this.index].integrations.map(int => [int.id, int]));
+    projects[this.index].activities.forEach((activity, j) => {
+        const source = intMap.get(activity.srcId);
+        const target = intMap.get(activity.tarId);
 
+        this.finalEdges.push(source.x, source.y, 0, target.x, target.y, 0);
+        this.edges.push(source.x, source.y, 0, target.x, target.y, 0);
+
+        // Set edge color based on the higher risk between source and target
+        const risk = activity.risk; // Math.max(source.risk, target.risk);
+        const riskColor = riskColors[risk] || riskColors[0]; // Default to green if risk is undefined
+
+        // Apply color to both vertices of the edge
+        riskColor.toArray(edgeColors, edgeColors.length); // Source vertex color
+        riskColor.toArray(edgeColors, edgeColors.length); // Target vertex color
+    
+    
+    
+
+        
+    });
+    // Create geometry for points
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute('position', new THREE.Float32BufferAttribute(this.positions, 3));
     geometry.setAttribute('customColor', new THREE.Float32BufferAttribute(this.colors, 3));
     geometry.setAttribute('size', new THREE.Float32BufferAttribute(this.sizes, 1));
     this.points = new THREE.Points(geometry, this.material);
 
+    // Create geometry for edges
     const edgesGeometry = new THREE.BufferGeometry();
     edgesGeometry.setAttribute('position', new THREE.Float32BufferAttribute(this.edges, 3));
+    edgesGeometry.setAttribute('color', new THREE.Float32BufferAttribute(edgeColors, 3)); // Add color attribute for edges
     this.lines = new THREE.LineSegments(edgesGeometry, this.edgesMaterial);
 
+    // Add points and lines to the group
     this.group.add(this.points);
     this.group.add(this.lines);
 
+    // Save the geometry for later updates
     this.geometry = geometry;
     this.edgesGeometry = edgesGeometry;
   }
@@ -245,10 +276,10 @@ class AnimationManager {
 async function init() {
   const vertexShader = await fetch('vertexShader.glsl').then((res) => res.text());
   const fragmentShader = await fetch('fragmentShader.glsl').then((res) => res.text());
-
+  projects = await fetch('projects2.json').then((res) => res.json());
   const container = document.getElementById('container');
   const scene = new THREE.Scene();
-
+  scene.background = new THREE.Color(0xffffff); 
   const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 10000);
   camera.position.set(250, 10, 250);
   //camera.lookAt(0, 0, 0); 
@@ -268,10 +299,10 @@ async function init() {
   });
 
   const edgesMaterial = new THREE.LineBasicMaterial({
-    color: 0xffffff,
+    vertexColors: true, // Enable vertex colors
     linewidth: 1,
     transparent: true,
-    opacity: 0.2
+    opacity: 0.8
   });
 
   const gridSize = 5;
@@ -321,7 +352,9 @@ async function init() {
 
   function animate() {
     requestAnimationFrame(animate);
+    
     animationManager.animate();
+
     renderer.render(scene, camera);
   }
 
