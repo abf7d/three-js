@@ -95,11 +95,24 @@ class PolygonGroup {
     this.animationSequence = new AnimationSequence();
   }
 
+  // how do I make the nodes a brighter color
+  // it seems that the timing is not synced for polygon animations
+  // how do I do this
   createPolygons() {
     const color = new THREE.Color();
+    let vertexColor;
+    if (this.index === 0) {
+        vertexColor = new THREE.Color('#1c1'); // Greenish color
+    } else if (this.index === 1) {
+        vertexColor = new THREE.Color('#ffd800'); // Yellow color
+    } else if (this.index === 2) {
+        vertexColor = new THREE.Color('#f00'); // Red color
+    } else {
+        vertexColor = new THREE.Color('#aaa'); // Default to white if index is not 0, 1, or 2
+    }
     for (let i = 0; i < this.gridSize; i++) {
       for (let j = 0; j < this.gridSize; j++) {
-        const colorCycleMutl = 6;
+        const colorCycleMutl = 10;
         const x = (i - (this.gridSize - 1) / 2) * this.gridSpacing;
         const y = (j - (this.gridSize - 1) / 2) * this.gridSpacing;
         const idx = i * colorCycleMutl * this.gridSize + j;
@@ -111,9 +124,11 @@ class PolygonGroup {
         } else {
           this.positions.push(0, 0, 0);
         }
-        color.setHSL(0.01 + (0.1 * idx) / (this.gridSize + j) / (this.gridSize * this.gridSize), 1.0, 0.5);
-        color.toArray(this.colors, this.colors.length);
-        this.sizes.push(10);
+        color.setHSL(120 / 360, 0.8, 0.43);
+        // color.setHSL(0.01 + (0.1 * idx) / (this.gridSize + j) / (this.gridSize * this.gridSize), 1.0, 0.5);
+        // color.toArray(this.colors, this.colors.length);
+        vertexColor.toArray(this.colors, this.colors.length);
+        this.sizes.push(17);
 
         if (i < this.gridSize - 1) {
           this.finalEdges.push(x, y, 0, x + this.gridSpacing, y, 0);
@@ -215,6 +230,28 @@ class PolygonGroup {
     );
   }
 
+  animatePointColorChange(targetColorHex, duration) {
+    const targetColor = new THREE.Color(targetColorHex); // Convert the target color from hex to THREE.Color
+    const startColors = this.colors.slice(); // Make a copy of the current colors
+
+    this.animationSequence.addStep(
+      new AnimationStep(0, 1, duration, (interpolatedValue) => {
+        const colors = this.geometry.getAttribute('customColor').array;
+
+        for (let i = 0; i < this.colors.length; i += 3) {
+          // Calculate the interpolated color
+          const startColor = new THREE.Color(startColors[i], startColors[i + 1], startColors[i + 2]);
+          const interpolatedColor = startColor.lerp(targetColor, interpolatedValue);
+
+          // Apply the interpolated color to the array
+          interpolatedColor.toArray(colors, i);
+        }
+
+        this.geometry.attributes.customColor.needsUpdate = true; // Mark the color attribute for update
+      })
+    );
+}
+
   update(currentTime) {
     this.animationSequence.update(currentTime);
 
@@ -248,7 +285,7 @@ async function init() {
 
   const container = document.getElementById('container');
   const scene = new THREE.Scene();
-
+  scene.background = new THREE.Color(0xffffff)
   const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 10000);
   camera.position.set(250, 10, 250);
   //camera.lookAt(0, 0, 0); 
@@ -257,7 +294,7 @@ async function init() {
 
   const material = new THREE.ShaderMaterial({
     uniforms: {
-      color: { value: new THREE.Color(0xffffff) },
+      color: { value: new THREE.Color(0xefefef) },
       pointTexture: {
         value: new THREE.TextureLoader().load('https://threejs.org/examples/textures/sprites/circle.png')
       },
@@ -268,10 +305,10 @@ async function init() {
   });
 
   const edgesMaterial = new THREE.LineBasicMaterial({
-    color: 0xffffff,
-    linewidth: 1,
+    color: 0x222222,
+    linewidth: 3,
     transparent: true,
-    opacity: 0.2
+    opacity: 0.8
   });
 
   const gridSize = 5;
@@ -287,9 +324,12 @@ async function init() {
   polygonGroup1.moveToZ(-70, 0.5);
   polygonGroup1.animatePointsExpandCollapse(true, 0.5);
   polygonGroup1.pause(14.5);
+  polygonGroup1.animatePointColorChange('#1c1', .7)
+  polygonGroup1.pause(1.5);
   polygonGroup1.animatePointsExpandCollapse(false, 0.5);
   polygonGroup1.pause(0.35);
   polygonGroup1.moveToZ(0, 0.5, -70);
+  polygonGroup1.animatePointColorChange('#ffd800', 0)
 
   animationManager.addPolygon(polygonGroup1);
 
@@ -300,9 +340,11 @@ async function init() {
   polygonGroup2.pause(2);
   polygonGroup2.animatePointsExpandCollapse(false, 0.25);
   polygonGroup2.moveToY(-140, 0.5, 0);
+  polygonGroup2.animatePointColorChange('#ffd800', 0)
   polygonGroup2.moveToY(0, 0.5, 140);
   polygonGroup2.pause(2);
   polygonGroup2.moveToY(-140, 0.5, 0);
+  polygonGroup2.animatePointColorChange('#1c1', 0)
   polygonGroup2.moveToY(0, 0.5, 140);
   polygonGroup2.animatePointsExpandCollapse(true, 0.25);
   polygonGroup2.pause(3);
@@ -311,6 +353,7 @@ async function init() {
   polygonGroup2.moveToZ(-70, 0.5, -140);
   polygonGroup2.pause(1.42);
   polygonGroup2.moveToZ(0, 0.5, -70);
+  polygonGroup2.animatePointColorChange('#f00', 0)
   animationManager.addPolygon(polygonGroup2);
 
   const renderer = new THREE.WebGLRenderer();
