@@ -86,8 +86,8 @@ class PolygonGroup {
     this.gridSize = gridSize;
     this.gridSpacing = gridSpacing;
     this.index = index;
-    this.material = material;
-    this.edgesMaterial = edgesMaterial;
+    this.material = material.clone();
+    this.edgesMaterial = edgesMaterial.clone();
 
     this.group = new THREE.Group();
     this.positions = [];
@@ -237,27 +237,54 @@ class PolygonGroup {
     );
   }
 
-  animatePointColorChange(targetColorHex, duration) {
-    const targetColor = new THREE.Color(targetColorHex); // Convert the target color from hex to THREE.Color
-    const startColors = this.colors.slice(); // Make a copy of the current colors
+  fadePoints(duration, targetAlpha = 1.0) {
+    const startAlpha = this.material.uniforms.alphaTest.value; // Get the current alpha value
 
     this.animationSequence.addStep(
-      new AnimationStep(0, 1, duration, (interpolatedValue) => {
-        const colors = this.geometry.getAttribute('customColor').array;
+        new AnimationStep(0, 1, duration, (interpolatedValue) => {
+            // Interpolate the alpha value
+            const interpolatedAlpha = THREE.MathUtils.lerp(startAlpha, targetAlpha, interpolatedValue);
 
-        for (let i = 0; i < this.colors.length; i += 3) {
-          // Calculate the interpolated color
-          const startColor = new THREE.Color(startColors[i], startColors[i + 1], startColors[i + 2]);
-          const interpolatedColor = startColor.lerp(targetColor, interpolatedValue);
+            // Set the alphaTest uniform to the interpolated alpha value
+            this.material.uniforms.alphaTest.value = interpolatedAlpha;
 
-          // Apply the interpolated color to the array
-          interpolatedColor.toArray(colors, i);
-        }
-
-        this.geometry.attributes.customColor.needsUpdate = true; // Mark the color attribute for update
-      })
+            this.material.needsUpdate = true; // Ensure the material is updated with the new alpha value
+        })
     );
-  }
+}
+
+  animatePointColorChange(targetColorHex = null, duration, targetAlpha = 0.4) {
+    const startColors = this.colors.slice(); // Make a copy of the current colors
+    const startAlpha = this.material.uniforms.alphaTest.value; // Get the current alpha value
+
+    this.animationSequence.addStep(
+        new AnimationStep(0, 1, duration, (interpolatedValue) => {
+            if (targetColorHex !== null) {
+                const targetColor = new THREE.Color(targetColorHex); // Convert the target color from hex to THREE.Color
+                const colors = this.geometry.getAttribute('customColor').array;
+
+                for (let i = 0; i < this.colors.length; i += 3) {
+                    // Calculate the interpolated color
+                    const startColor = new THREE.Color(startColors[i], startColors[i + 1], startColors[i + 2]);
+                    const interpolatedColor = startColor.lerp(targetColor, interpolatedValue);
+
+                    // Apply the interpolated color to the array
+                    interpolatedColor.toArray(colors, i);
+                }
+
+                this.geometry.attributes.customColor.needsUpdate = true; // Mark the color attribute for update
+            }
+
+            // Interpolate the alpha value
+            // const interpolatedAlpha = THREE.MathUtils.lerp(startAlpha, targetAlpha, interpolatedValue);
+
+            // // Set the alphaTest uniform to the interpolated alpha value
+            // this.material.uniforms.alphaTest.value = interpolatedAlpha;
+
+            this.material.needsUpdate = true; // Ensure the material is updated with the new alpha value
+        })
+    );
+}
 
   update(currentTime) {
     this.animationSequence.update(currentTime);
@@ -338,41 +365,43 @@ async function init() {
   const animationManager = new AnimationManager();
   const polygonGroup0 = new PolygonGroup(scene, gridSize, gridSpacing, initialZPosition, 0, material, edgesMaterial);
   polygonGroup0.animatePointsExpandCollapse(true, 0);
-  polygonGroup0.pause(16.5);
+  polygonGroup0.pause(12);
   animationManager.addPolygon(polygonGroup0);
   const polygonGroup1 = new PolygonGroup(scene, gridSize, gridSpacing, initialZPosition, 1, material, edgesMaterial);
   polygonGroup1.moveToZ(-70, 0.5);
-  polygonGroup1.animatePointsExpandCollapse(true, 0.5);
-  polygonGroup1.pause(14.5);
+  polygonGroup1.animatePointsExpandCollapse(true, 0.25);
+  polygonGroup1.pause(8);
   polygonGroup1.animatePointColorChange('#1c1', .7)
-  polygonGroup1.pause(1.5);
-  polygonGroup1.animatePointsExpandCollapse(false, 0.5);
-  polygonGroup1.pause(0.35);
+  polygonGroup1.pause(.4);
+  polygonGroup1.animatePointsExpandCollapse(false, 0.25);
+  polygonGroup1.pause(0.15);
   polygonGroup1.moveToZ(0, 0.5, -70);
   polygonGroup1.animatePointColorChange('#ffd800', 0)
 
   animationManager.addPolygon(polygonGroup1);
 
   const polygonGroup2 = new PolygonGroup(scene, gridSize, gridSpacing, 0, 2, material, edgesMaterial);
-  polygonGroup2.pause(3);
+  polygonGroup2.pause(1);
+  polygonGroup2.fadePoints(0, .8)
   polygonGroup2.moveToZ(-140, 0.5, -70);
   polygonGroup2.animatePointsExpandCollapse(true, 0.25);
-  polygonGroup2.pause(2);
+  polygonGroup2.pause(1);
   polygonGroup2.animatePointsExpandCollapse(false, 0.25);
   polygonGroup2.moveToY(-140, 0.5, 0);
   polygonGroup2.animatePointColorChange('#ffd800', 0)
   polygonGroup2.moveToY(0, 0.5, 140);
-  polygonGroup2.pause(2);
+  polygonGroup2.pause(.5);
   polygonGroup2.moveToY(-140, 0.5, 0);
   polygonGroup2.animatePointColorChange('#1c1', 0)
   polygonGroup2.moveToY(0, 0.5, 140);
   polygonGroup2.animatePointsExpandCollapse(true, 0.25);
-  polygonGroup2.pause(3);
+  polygonGroup2.pause(1);
   polygonGroup2.animatePointsExpandCollapse(false, 0.25);
   polygonGroup2.pause(0.5);
   polygonGroup2.moveToZ(-70, 0.5, -140);
   polygonGroup2.pause(1.42);
-  polygonGroup2.moveToZ(0, 0.5, -70);
+  // polygonGroup2.moveToZ(0, 0.5, -70);
+  polygonGroup2.fadePoints(0, 10)
   polygonGroup2.animatePointColorChange('#f00', 0)
   animationManager.addPolygon(polygonGroup2);
 
