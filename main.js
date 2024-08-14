@@ -364,11 +364,11 @@ async function init() {
 
   const animationManager = new AnimationManager();
   const polygonGroup0 = new PolygonGroup(scene, gridSize, gridSpacing, initialZPosition, 0, material, edgesMaterial);
-  polygonGroup0.animatePointColorChange('#1c1', .5)
   polygonGroup0.animatePointsExpandCollapse(true, 0);
-  polygonGroup0.pause(11);
+  polygonGroup0.pause(11.5);
   polygonGroup0.animatePointColorChange('#999', .5)
-  polygonGroup0.pause(2);
+  polygonGroup0.pause(1.5);
+  polygonGroup0.animatePointColorChange('#1c1', .5)
 
   animationManager.addPolygon(polygonGroup0);
   const polygonGroup1 = new PolygonGroup(scene, gridSize, gridSpacing, initialZPosition, 1, material, edgesMaterial);
@@ -394,7 +394,7 @@ async function init() {
   polygonGroup2.moveToY(-140, 0.5, 0);
   polygonGroup2.animatePointColorChange('#ffd800', 0)
   polygonGroup2.moveToY(0, 0.5, 140);
-  polygonGroup2.pause(.5);
+  polygonGroup2.pause(.1);
   polygonGroup2.moveToY(-140, 0.5, 0);
   polygonGroup2.animatePointColorChange('#1c1', 0)
   polygonGroup2.moveToY(0, 0.5, 140);
