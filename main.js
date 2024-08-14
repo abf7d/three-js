@@ -46,6 +46,7 @@ class AnimationSequence {
   constructor() {
     this.steps = [];
     this.currentStepIndex = 0;
+    this.markForResetCallback = null;
   }
 
   addStep(step) {
@@ -59,7 +60,10 @@ class AnimationSequence {
         this.currentStepIndex++;
       }
     } else {
-      this.reset();
+      if (this.markForResetCallback) {
+        // This resets the animation from the parent if all polygons have completed their sequences
+        this.markForResetCallback(true);
+      }
     }
   }
 
@@ -70,6 +74,9 @@ class AnimationSequence {
 
   isComplete() {
     return this.currentStepIndex >= this.steps.length;
+  }
+  setMarkForResetCallback(callback) {
+    this.markForResetCallback = callback;
   }
 }
 
@@ -102,13 +109,13 @@ class PolygonGroup {
     const color = new THREE.Color();
     let vertexColor;
     if (this.index === 0) {
-        vertexColor = new THREE.Color('#1c1'); // Greenish color
+      vertexColor = new THREE.Color('#1c1'); // Greenish color
     } else if (this.index === 1) {
-        vertexColor = new THREE.Color('#ffd800'); // Yellow color
+      vertexColor = new THREE.Color('#ffd800'); // Yellow color
     } else if (this.index === 2) {
-        vertexColor = new THREE.Color('#f00'); // Red color
+      vertexColor = new THREE.Color('#f00'); // Red color
     } else {
-        vertexColor = new THREE.Color('#aaa'); // Default to white if index is not 0, 1, or 2
+      vertexColor = new THREE.Color('#aaa'); // Default to white if index is not 0, 1, or 2
     }
     for (let i = 0; i < this.gridSize; i++) {
       for (let j = 0; j < this.gridSize; j++) {
@@ -250,7 +257,7 @@ class PolygonGroup {
         this.geometry.attributes.customColor.needsUpdate = true; // Mark the color attribute for update
       })
     );
-}
+  }
 
   update(currentTime) {
     this.animationSequence.update(currentTime);
@@ -276,6 +283,19 @@ class AnimationManager {
   animate() {
     const currentTime = Date.now();
     this.polygons.forEach((polygon) => polygon.update(currentTime));
+  }
+
+  initializeReset() {
+    let numResets = 0;
+    this.polygons.forEach(poly => poly.animationSequence.setMarkForResetCallback((reset) => {
+      if (reset) {
+        numResets++;
+        if (numResets === this.polygons.length) {
+          this.polygons.forEach((polygon) => polygon.animationSequence.reset());
+          numResets = 0;
+        }
+      }
+    }));
   }
 }
 
@@ -361,13 +381,18 @@ async function init() {
   container.appendChild(renderer.domElement);
 
   window.addEventListener('resize', () => onWindowResize(camera, renderer));
-
+  // let resetInitiated = false;
   function animate() {
     requestAnimationFrame(animate);
+    // if (!resetInitiated) {
+      // this is a hack, it shouldn't be called every frame, it should be called once
+      // but it only works this way
+      animationManager.initializeReset();
+      // resetInitiated = true;
+    // }
     animationManager.animate();
     renderer.render(scene, camera);
   }
-
   animate();
 }
 
