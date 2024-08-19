@@ -241,50 +241,50 @@ class PolygonGroup {
     const startAlpha = this.material.uniforms.alphaTest.value; // Get the current alpha value
 
     this.animationSequence.addStep(
-        new AnimationStep(0, 1, duration, (interpolatedValue) => {
-            // Interpolate the alpha value
-            const interpolatedAlpha = THREE.MathUtils.lerp(startAlpha, targetAlpha, interpolatedValue);
+      new AnimationStep(0, 1, duration, (interpolatedValue) => {
+        // Interpolate the alpha value
+        const interpolatedAlpha = THREE.MathUtils.lerp(startAlpha, targetAlpha, interpolatedValue);
 
-            // Set the alphaTest uniform to the interpolated alpha value
-            this.material.uniforms.alphaTest.value = interpolatedAlpha;
+        // Set the alphaTest uniform to the interpolated alpha value
+        this.material.uniforms.alphaTest.value = interpolatedAlpha;
 
-            this.material.needsUpdate = true; // Ensure the material is updated with the new alpha value
-        })
+        this.material.needsUpdate = true; // Ensure the material is updated with the new alpha value
+      })
     );
-}
+  }
 
   animatePointColorChange(targetColorHex = null, duration, targetAlpha = 0.4) {
     const startColors = this.colors.slice(); // Make a copy of the current colors
     const startAlpha = this.material.uniforms.alphaTest.value; // Get the current alpha value
 
     this.animationSequence.addStep(
-        new AnimationStep(0, 1, duration, (interpolatedValue) => {
-            if (targetColorHex !== null) {
-                const targetColor = new THREE.Color(targetColorHex); // Convert the target color from hex to THREE.Color
-                const colors = this.geometry.getAttribute('customColor').array;
+      new AnimationStep(0, 1, duration, (interpolatedValue) => {
+        if (targetColorHex !== null) {
+          const targetColor = new THREE.Color(targetColorHex); // Convert the target color from hex to THREE.Color
+          const colors = this.geometry.getAttribute('customColor').array;
 
-                for (let i = 0; i < this.colors.length; i += 3) {
-                    // Calculate the interpolated color
-                    const startColor = new THREE.Color(startColors[i], startColors[i + 1], startColors[i + 2]);
-                    const interpolatedColor = startColor.lerp(targetColor, interpolatedValue);
+          for (let i = 0; i < this.colors.length; i += 3) {
+            // Calculate the interpolated color
+            const startColor = new THREE.Color(startColors[i], startColors[i + 1], startColors[i + 2]);
+            const interpolatedColor = startColor.lerp(targetColor, interpolatedValue);
 
-                    // Apply the interpolated color to the array
-                    interpolatedColor.toArray(colors, i);
-                }
+            // Apply the interpolated color to the array
+            interpolatedColor.toArray(colors, i);
+          }
 
-                this.geometry.attributes.customColor.needsUpdate = true; // Mark the color attribute for update
-            }
+          this.geometry.attributes.customColor.needsUpdate = true; // Mark the color attribute for update
+        }
 
-            // Interpolate the alpha value
-            // const interpolatedAlpha = THREE.MathUtils.lerp(startAlpha, targetAlpha, interpolatedValue);
+        // Interpolate the alpha value
+        // const interpolatedAlpha = THREE.MathUtils.lerp(startAlpha, targetAlpha, interpolatedValue);
 
-            // // Set the alphaTest uniform to the interpolated alpha value
-            // this.material.uniforms.alphaTest.value = interpolatedAlpha;
+        // // Set the alphaTest uniform to the interpolated alpha value
+        // this.material.uniforms.alphaTest.value = interpolatedAlpha;
 
-            this.material.needsUpdate = true; // Ensure the material is updated with the new alpha value
-        })
+        this.material.needsUpdate = true; // Ensure the material is updated with the new alpha value
+      })
     );
-}
+  }
 
   update(currentTime) {
     this.animationSequence.update(currentTime);
@@ -420,10 +420,10 @@ async function init() {
   function animate() {
     requestAnimationFrame(animate);
     // if (!resetInitiated) {
-      // this is a hack, it shouldn't be called every frame, it should be called once
-      // but it only works this way
-      animationManager.initializeReset();
-      // resetInitiated = true;
+    // this is a hack, it shouldn't be called every frame, it should be called once
+    // but it only works this way
+    animationManager.initializeReset();
+    // resetInitiated = true;
     // }
     animationManager.animate();
     renderer.render(scene, camera);
@@ -431,10 +431,129 @@ async function init() {
   animate();
 }
 
+async function init2() {
+  const vertexShader = await fetch('vertexShader.glsl').then((res) => res.text());
+  const fragmentShader = await fetch('fragmentShader.glsl').then((res) => res.text());
+
+  const container = document.getElementById('container');
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0xffffff);
+
+  const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 10000);
+  camera.position.set(250, 10, 250);
+  camera.lookAt(0, 0, -70);
+  camera.rotation.z = THREE.MathUtils.degToRad(45);
+
+  const edgesMaterial = new THREE.LineBasicMaterial({
+    color: 0xbbbbbb,  // Lighter gray for edges
+    linewidth: 2,
+    transparent: true,
+    opacity: 0.5
+  });
+
+  const createParticleSphere = (radius, latSegments, lonSegments, color) => {
+    const geometry = new THREE.BufferGeometry();
+    const positions = [];
+    const edges = [];
+
+    for (let i = 0; i <= latSegments; i++) {
+      const theta = (i * Math.PI) / latSegments; // Latitude angle
+
+      for (let j = 0; j <= lonSegments; j++) {
+        const phi = (j * 2 * Math.PI) / lonSegments; // Longitude angle
+
+        const x = radius * Math.sin(theta) * Math.cos(phi);
+        const y = radius * Math.sin(theta) * Math.sin(phi);
+        const z = radius * Math.cos(theta);
+
+        positions.push(x, y, z);
+
+        // Connect this point to the previous one along the same latitude
+        if (j > 0) {
+          edges.push(
+            positions[(i * (lonSegments + 1) + j - 1) * 3],     // Previous longitude
+            positions[(i * (lonSegments + 1) + j - 1) * 3 + 1], 
+            positions[(i * (lonSegments + 1) + j - 1) * 3 + 2], 
+            x, y, z
+          );
+        }
+
+        // Connect this point to the previous one along the same longitude
+        if (i > 0) {
+          edges.push(
+            positions[((i - 1) * (lonSegments + 1) + j) * 3],     // Previous latitude
+            positions[((i - 1) * (lonSegments + 1) + j) * 3 + 1], 
+            positions[((i - 1) * (lonSegments + 1) + j) * 3 + 2], 
+            x, y, z
+          );
+        }
+      }
+    }
+
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+
+    // Create particle points
+    const particleMaterial = new THREE.PointsMaterial({
+      color: color,
+      size: 5,
+      sizeAttenuation: true,
+      transparent: true,
+      opacity: 0.8
+    });
+
+    const particles = new THREE.Points(geometry, particleMaterial);
+
+    // Create edges
+    const edgeGeometry = new THREE.BufferGeometry();
+    edgeGeometry.setAttribute('position', new THREE.Float32BufferAttribute(edges, 3));
+    const lineSegments = new THREE.LineSegments(edgeGeometry, edgesMaterial);
+
+    const group = new THREE.Group();
+    group.add(particles);     // Add particles to the group
+    group.add(lineSegments);  // Add edges to the group
+
+    return group;
+  };
+
+  // Create spheres with progressively lighter colors and matching lighter edges
+  const sphere1 = createParticleSphere(200, 12, 24, new THREE.Color(0xaaaaaa)); // Starting with light gray
+  // const sphere2 = createParticleSphere(150, 12, 24, new THREE.Color(0xcccccc)); // Lighter
+  // const sphere3 = createParticleSphere(100, 12, 24, new THREE.Color(0xeeeeee)); // Lightest
+
+  scene.add(sphere1);
+  // scene.add(sphere2);
+  // scene.add(sphere3);
+
+  const renderer = new THREE.WebGLRenderer();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  container.appendChild(renderer.domElement);
+
+  window.addEventListener('resize', () => onWindowResize(camera, renderer));
+
+  function animate() {
+    requestAnimationFrame(animate);
+
+    // Rotate spheres at different speeds
+    sphere1.rotation.y += 0.01;
+    // sphere2.rotation.y -= 0.015;
+    // sphere3.rotation.y += 0.02;
+
+    renderer.render(scene, camera);
+  }
+  animate();
+}
+
+// function onWindowResize(camera, renderer) {
+//   camera.aspect = window.innerWidth / window.innerHeight;
+//   camera.updateProjectionMatrix();
+//   renderer.setSize(window.innerWidth, window.innerHeight);
+// }
+
+
 function onWindowResize(camera, renderer) {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
-init();
+init2();
